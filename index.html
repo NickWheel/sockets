@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    </head>
+    <style>
+      * {
+        margin: 0px;
+      }
+    </style>
+    <body>
+        <div class="chatWindow">  </div>
+        <div class="chatArea" id="chatArea" style='border: 1px solid black'></div>
+        <div class="isWriting" id="isWriting"></div>
+        <input type="text" class="msg-input" id="inputMsg">
+        <button class='msg-btn' type="button">send</button>
+
+        <script>
+          const socket = io('http://localhost:3000');
+          const userName = prompt('whatsyorNAME ??');
+
+          // user is writing socket
+          inputMsg.oninput = () => {
+            socket.emit('writing', userName);
+            inputMsg.onchange = () => {
+              socket.emit('finishedWriting', userName);
+            }
+          };
+          socket.on('writing', (user) => {
+            if (!document.getElementById(`${user}`)) {
+              isWriting.innerHTML += `<p id="${user}" style='color: grey'>${user} is writing.. </p>`
+            }
+          })
+          socket.on('finishedWriting', (user) => {
+            let elem = document.getElementById(`${user}`);
+            elem.parentNode.removeChild(elem);
+          })
+
+
+          // newUser socket
+          socket.emit('newUser', userName);
+          socket.on('newUser', (user) => {
+            document.querySelector('.chatArea').innerHTML += `<h3>New user ${user} has joined!</h3><br>`;
+          });
+
+
+          // user has left socket
+          window.addEventListener('beforeunload', () => {
+            socket.emit('close', userName);
+          })
+          socket.on('close'), (user) => {
+            console.log(user);
+            document.querySelector('.chatArea').innerHTML += `<h3>User ${user} has left the chat</h3><br>`
+          };
+
+
+          // user have sent a message socket
+          document.querySelector('.msg-btn').addEventListener('click', () => {
+            const text = document.querySelector('.msg-input').value;
+            document.querySelector('.msg-input').value = '';
+            socket.emit('msg', {text, userName});
+            document.querySelector('.chatArea').innerHTML += `<p>${text}</p><h4>YOU</h4><br>`;
+          });
+          socket.on('msg', (data) => {
+            console.log('message: ', data.text, ';   from: ', data.userName);
+            document.querySelector('.chatArea').innerHTML += `<p>${data.text}</p><h4>${data.userName}</h4><br>`;
+          });
+          
+        </script>
+    </body>
+</html>
